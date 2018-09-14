@@ -2,10 +2,11 @@ library(dplyr)
 library(magrittr)
 library(ggplot2)
 
-# create dataframe from confood 
+# create dataframe from confood
+
 confood_df <- data.frame(confood)
 
-# add columns for revenues
+# add columns for revenues & total sales for brand 1 to 5
 
 confood_df <- mutate(confood_df, 
        revenues_b1 = saleb1 * apriceb1,
@@ -13,6 +14,9 @@ confood_df <- mutate(confood_df,
        revenues_b3 = saleb3 * apriceb3,
        revenues_b4 = saleb4 * apriceb4,
        revenues_b5 = saleb5 * apriceb5)
+
+confood_df <- mutate(confood_df,
+       total_sale_b2to5 = saleb2 + saleb3 + saleb4 + saleb5)
 
 # create descriptive stat dataframe from confood_df
 
@@ -47,3 +51,64 @@ histogram_vector_df <- mutate(histogram_vector_df, name = c("Brand 1", "Brand 2 
 ggplot(histogram_vector_df, aes(x = name, y = histogram_vector)) + 
   geom_bar(stat = "identity")
 
+# new array grouped by week number
+
+confood_grouped <- confood_df %>%
+  group_by(weeknum) %>%
+  summarise(sum_sales_b1 = sum(saleb1), total_sales_b2to5 = sum(total_sale_b2to5))
+
+# plot the time series of sales for brand 1
+
+ggplot(confood_grouped, aes(weeknum)) +
+  geom_line(aes(y = sum_sales_b1, colour = "sales_b1")) +
+  geom_line(aes(y = total_sales_b2to5, colour = "sales_b2to5"))
+
+# new array with sales price weighted by storenum
+
+confood_sales_weighted <- confood_df %>%
+  group_by(weeknum) %>%
+  summarise(avg_price_weekly_b1 = mean(apriceb1), 
+            avg_price_weekly_b2 = mean(apriceb2),
+            avg_price_weekly_b3 = mean(apriceb3),
+            avg_price_weekly_b4 = mean(apriceb4),
+            avg_price_weekly_b5 = mean(apriceb5),
+            avg_price_weekly_b2to4 = (avg_price_weekly_b2 + 
+                                          avg_price_weekly_b3 + 
+                                          avg_price_weekly_b4) / 3)
+
+# plot the average sales price of brand 1 and brand 2 to 4
+
+ggplot(confood_sales_weighted, aes(weeknum)) +
+  geom_line(aes(y = avg_price_weekly_b1, colour = "avg price b1")) +
+  geom_line(aes(y = avg_price_weekly_b2to4, colour = "avg price b2 to 4"))
+
+# group 52 weeks into 4 weeks periods 
+
+confood_period_grouped <- confood_df %>%
+  group_by(period) %>%
+  summarise(sum_sales_b1 = sum(saleb1), total_sales_b2to5 = sum(total_sale_b2to5))
+
+# plot the time series of sales for brand 1
+
+ggplot(confood_period_grouped, aes(period)) +
+  geom_line(aes(y = sum_sales_b1, colour = "sales_b1")) +
+  geom_line(aes(y = total_sales_b2to5, colour = "sales_b2to5"))
+
+# new array with period sales price weighted by storenum
+
+confood_sales_weighted <- confood_df %>%
+  group_by(period) %>%
+  summarise(avg_price_weekly_b1 = mean(apriceb1), 
+            avg_price_weekly_b2 = mean(apriceb2),
+            avg_price_weekly_b3 = mean(apriceb3),
+            avg_price_weekly_b4 = mean(apriceb4),
+            avg_price_weekly_b5 = mean(apriceb5),
+            avg_price_weekly_b2to4 = (avg_price_weekly_b2 + 
+                                        avg_price_weekly_b3 + 
+                                        avg_price_weekly_b4) / 3)
+
+# plot the average sales price of brand 1 and brand 2 to 4 for the periods
+
+ggplot(confood_sales_weighted, aes(period)) +
+  geom_line(aes(y = avg_price_weekly_b1, colour = "avg price b1")) +
+  geom_line(aes(y = avg_price_weekly_b2to4, colour = "avg price b2 to 4"))
