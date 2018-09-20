@@ -1,3 +1,4 @@
+#import data
 library(readr)
 confood2 <- read_csv("~/MSc DSBA/Stats/refresh/confood2.csv")
 summary(confood2)
