@@ -36,15 +36,15 @@ descriptive_stat <- summarise(confood_df,
           total_sales_b2 = sum(saleb2), 
           total_sales_b3 = sum(saleb3), 
           total_sales_b4 = sum(saleb4),
-          total_sales_b5 = sum(saleb5),
-          total_sales_market = sum(saleb1, saleb2, saleb3, saleb4, saleb5),
-          total_sales_2to5 = sum(saleb2, saleb3, saleb4, saleb5),
-          average_price_2to5 = mean(mean(apriceb1), mean(apriceb2), mean(apriceb3), mean(apriceb4), mean(apriceb5)),
+          total_sales_b5 = sum(saleb5, na.rm = TRUE),
+          total_sales_market = sum(total_sales_b5, total_sales_b4, total_sales_b3, total_sales_b2, total_sales_b1),
+          total_sales_2to5 = sum(total_sales_b5, total_sales_b4, total_sales_b3, total_sales_b2, total_sales_b1),
+          average_price_2to5 = mean(mean(apriceb1), mean(apriceb2), mean(apriceb3), mean(apriceb4), mean(apriceb5, na.rm = TRUE)),
           total_revenue_b1 = sum(revenues_b1),
           total_revenue_b2 = sum(revenues_b2),
           total_revenue_b3 = sum(revenues_b3),
           total_revenue_b4 = sum(revenues_b4),
-          total_revenue_b5 = sum(revenues_b5),
+          total_revenue_b5 = sum(revenues_b5, na.rm = TRUE),
           total_revenue_market = sum(total_revenue_b1, total_revenue_b2, total_revenue_b3, total_revenue_b4, total_revenue_b5),
           market_share_b1 = total_revenue_b1 / sum(total_revenue_market),
           market_share_b2 = total_revenue_b2 / sum(total_revenue_market),
@@ -54,13 +54,19 @@ descriptive_stat <- summarise(confood_df,
 
 # create a 2d vector to print an histogram
 
-histogram_vector_df <- data.frame(c(descriptive_stat$total_sales_b1, descriptive_stat$total_sales_2to5))
-histogram_vector_df <- mutate(histogram_vector_df, name = c("Brand 1", "Brand 2 through 5"))
+histogram_vector_df <- data.frame(total_sales = c(descriptive_stat$total_sales_b1, 
+                                                  descriptive_stat$total_sales_b2, 
+                                                  descriptive_stat$total_sales_b3, 
+                                                  descriptive_stat$total_sales_b4, 
+                                                  descriptive_stat$total_sales_b5, 
+                                                  descriptive_stat$total_sales_2to5))
+histogram_vector_df <- mutate(histogram_vector_df, name = c("Brand 1", "Brand 2", "Brand 3", "Brand 4", "Brand 5", "Brands 2 to 5"))
 
 # print a histogram to see market share of brand 1 versus all other brands
 
-ggplot(histogram_vector_df, aes(x = name, y = histogram_vector)) + 
-  geom_bar(stat = "identity")
+ggplot(histogram_vector_df, aes(x = name, y = total_sales, fill = name)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values=c("#0101DF", "#E69F00", "#56B4E9", "#FF4000", "#38610B","#141907" ))
 
 # new array grouped by week number
 
@@ -90,7 +96,7 @@ confood_sales_weighted_weekly <- confood_df %>%
 
 # plot the average sales price of brand 1 and brand 2 to 5
 
-ggplot(confood_sales_weighted, aes(weeknum)) +
+ggplot(confood_sales_weighted_weekly, aes(weeknum)) +
   geom_line(aes(y = avg_price_weekly_b1, colour = "avg price b1")) +
   geom_line(aes(y = avg_price_weekly_b2to5, colour = "avg price b2 to 5"))
 
@@ -179,7 +185,8 @@ correlations_combination_sales_b1to4 <- confood_df %>%
 # Brand 1
 
 ggplot(confood_df, aes(x = apriceb1, y = saleb1)) + 
-  geom_point()
+  geom_point() +
+  labs(x = "Price of brand 1", y = "Sales of brand 1")
 
 # Brand 2
 
@@ -196,23 +203,24 @@ ggplot(confood_df, aes(x = apriceb3, y = saleb3)) +
 ggplot(confood_df, aes(x = apriceb4, y = saleb4)) + 
   geom_point()
 
-
 # Brand 5
 
-ggplot(confood_df, aes(x = apriceb5, y = saleb5)) + 
+ggplot(na.omit(confood_df), aes(x = apriceb5, y = saleb5)) + 
   geom_point()
 
 # B.4 Scatter plot for Brand 1 sales versus the weighted average price of all competing brands.
 
 ggplot(confood_df, aes(x=avg_price_2to5, y=saleb1)) + 
   geom_point() + 
-  geom_smooth(method=lm, se=FALSE)
+  geom_smooth(method=lm, se=FALSE) +
+  labs(x = "Average price of Brands 2 to 5", y = "Sales of brand 1")
 
 # B.5 Simple linear regression for Brand 1
 
-ggplot(confood_df, aes(x = apriceb1 , y = saleb1)) + 
+ggplot(confood_df, aes(x = apriceb1, y = saleb1)) + 
   geom_point() +
-  geom_smooth(method="lm", se=TRUE, fullrange=FALSE, level=0.95)
+  geom_smooth(method="lm", se=TRUE, fullrange=FALSE, level=0.95) +
+  labs(x = "Price of brand 1", y = "Sales of brand 1")
 
 # B.6 Preparing a new array with sales grouped by promotions to indicate the relationship
 # between quantity sold and type of promotion used.
@@ -221,18 +229,41 @@ confood_sales_promotion1 <- confood_df %>%
   group_by(promotb1) %>%
   summarise(mean = mean(saleb1))
 
+ggplot(confood_sales_promotion1, aes(x = promotb1, y = mean, fill = promotb1)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Promotion Type", y = " Average sales brand 1") +
+  labs(fill = "promotion type")
+
 confood_sales_promotion2 <- confood_df %>%
   group_by(promotb2) %>%
   summarise(mean = mean(saleb2))
+
+ggplot(confood_sales_promotion2, aes(x = promotb2, y = mean, fill = promotb2)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Promotion Type", y = "Average sales brand 2") +
+  labs(fill = "promotion type")
 
 confood_sales_promotion3 <- confood_df %>%
   group_by(promotb3) %>%
   summarise(mean = mean(saleb3))
 
+ggplot(confood_sales_promotion3, aes(x = promotb3, y = mean, fill = promotb3)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Promotion Type", y = " Average sales brand 3") +
+  labs(fill = "promotion type")
+
 confood_sales_promotion4 <- confood_df %>%
   group_by(promotb4) %>%
   summarise(mean = mean(saleb4))
 
+ggplot(confood_sales_promotion4, aes(x = promotb4, y = mean, fill = promotb4)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Promotion Type", y = " Average Sales brand 4") +
+  labs(fill = "promotion type")
+
 confood_sales_promotion5 <- confood_df %>%
   group_by(promotb5) %>%
   summarise(mean = mean(saleb5, na.rm = TRUE))
+
+ggplot(confood_sales_promotion5, aes(x = promotb5, y = mean, fill = promotb5)) + 
+  geom_bar(stat = "identity")
